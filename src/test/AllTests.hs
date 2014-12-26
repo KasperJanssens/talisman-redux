@@ -7,6 +7,6 @@ import Test.Hspec
 main :: IO()
 main = hspec $
  describe "Unit tests" $ do
-  AdventureTest.spec
+  AdventureTest.adventureSpec
   SpaceTest.spec
 

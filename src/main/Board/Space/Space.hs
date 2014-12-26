@@ -1,3 +1,4 @@
+{-# LANGUAGE  TemplateHaskell #-}
 module Board.Space.Space where
 
 import Board.Adventure.Adventure
@@ -5,14 +6,43 @@ import Board.Follower.Follower
 import Board.Object.Object
 import Data.Map
 import Control.Lens
-import Control.Monad
+import Data.List as List
+
+data SpaceType =
+  Fields1Space
+  | Fields2Space
+  | Fields3Space
+  | Fields4Space
+  | Fields5Space
+  | Fields6Space
+  | ForestSpace
+  | RuinsSpace
+  | TavernSpace
+  | Plains1Space
+  | Plains2Space
+  | Plains3Space
+  | Plains4Space
+  | Woods1Space
+  | Woods2Space
+  | Woods3Space
+  | Hills1Space
+  | Hills2Space
+  | CitySpace
+  | ChapelSpace
+  | SentinelSpace
+  | GraveyardSpace
+  | VillageSpace
+  | CragsSpace  deriving (Eq, Ord, Show, Enum)
+
 
 data Space = Space {
   _freeFollowers :: [Follower]
   , _freeObjects :: [Object]
   , _adventures :: [Adventure]
-  , _type :: SpaceType
+  , _spaceType :: SpaceType
 }
+
+makeLenses ''Space
 
 type Board = Map SpaceType Space
 type BoardLayout = Map SpaceType [SpaceType]
@@ -45,50 +75,41 @@ boardLayout = fromList [
   , (Fields6Space,   [CragsSpace, ChapelSpace])
  ]
 
-movementOptions :: BoardLayout -> Int -> SpaceType -> Maybe [SpaceType]
-movementOptions _ 0 curSpace      = Just [curSpace]
-movementOptions layout x curSpace = neighbours
-                                      & fmap (traverse $ movementOptions layout (x-1))
-                                      & join
-                                      & fmap concat
-                                    where neighbours = layout ^. at curSpace
+{-Initialize previous with current space as it doesn't matter in the beginning anyway, the filtering
+should just not happen (in this case it will happen but no space can be it's own neigbour so nothing
+will be filtered. It's nasty, it's true. -}
+movementOptions :: Int -> SpaceType -> Either String [SpaceType]
+movementOptions dieRoll curSpace = movementOptionsEither boardLayout dieRoll curSpace curSpace
 
-createInitialBoard :: Map SpaceType Space
+movementOptionsEither :: BoardLayout -> Int -> SpaceType -> SpaceType -> Either String [SpaceType]
+movementOptionsEither _ 0 previous curSpace = Right [curSpace]
+movementOptionsEither layout x previous curSpace = do
+                                    neighbours <- maybe
+                                                     (Left $ "Didn't find space " ++ show curSpace ++ " in boardLayout, not so good")
+                                                     Right $ layout ^. at curSpace
+                                    let neighboursButNoBackTracking = List.filter (/= previous) neighbours
+                                    listOfLists <- traverse (movementOptionsEither layout (x-1) curSpace) neighboursButNoBackTracking
+                                    return . concat $ listOfLists
+
+movementOptionsMaybe :: BoardLayout -> Int -> SpaceType -> SpaceType -> Maybe [SpaceType]
+movementOptionsMaybe _ 0 previous curSpace      = Just [curSpace]
+movementOptionsMaybe layout x previous curSpace = do
+                                    neighbours <- layout ^. at curSpace
+                                    let neighboursButNoBackTracking = List.filter (/= previous) neighbours
+                                    listOfLists <- traverse (movementOptionsMaybe layout (x-1) curSpace) neighboursButNoBackTracking
+                                    return . concat $ listOfLists
+
+createInitialBoard :: Board
 createInitialBoard = fromList $ zip fieldsTypeList $
                        fmap createStartingSpace fieldsTypeList
                      where fieldsTypeList = [Fields1Space ..]
 
 createStartingSpace :: SpaceType -> Space
 createStartingSpace spaceType = Space {
-    _type = spaceType
+    _spaceType = spaceType
   , _freeFollowers = []
   , _freeObjects = []
   , _adventures = []
   }
 
-data SpaceType =
-  Fields1Space 
-  | Fields2Space 
-  | Fields3Space 
-  | Fields4Space 
-  | Fields5Space 
-  | Fields6Space 
-  | ForestSpace 
-  | RuinsSpace 
-  | TavernSpace 
-  | Plains1Space 
-  | Plains2Space 
-  | Plains3Space 
-  | Plains4Space 
-  | Woods1Space 
-  | Woods2Space 
-  | Woods3Space 
-  | Hills1Space 
-  | Hills2Space 
-  | CitySpace 
-  | ChapelSpace 
-  | SentinelSpace 
-  | GraveyardSpace 
-  | VillageSpace 
-  | CragsSpace  deriving (Eq, Ord, Show, Enum)
 

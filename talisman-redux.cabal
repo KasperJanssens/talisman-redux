@@ -34,10 +34,13 @@ library
     , Board.Object.Object
     , Board.Space.Space
     , Character.Character
+    , DungeonMaster.DungeonMaster
   other-modules:
   build-depends:       base >=4.6
                        , lens
                        , containers
+                       , mtl
+                       , either
   ghc-options:         -threaded -O2
 
 test-suite unit-tests
