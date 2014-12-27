@@ -9,7 +9,7 @@ import Board.Space.Space
 
 data Alignment = Good | Neutral | Evil deriving (Eq, Ord, Show)
 
-data CharacterType = Wizard | Thief | OgreChieftain
+data CharacterType = Wizard | Thief | OgreChieftain deriving (Eq, Ord, Show)
 
 data Character = Character {
   _strength :: Int
@@ -23,17 +23,14 @@ data Character = Character {
   , _characterType :: CharacterType
 }
 
-data AI = AI {
-  _selectCharacter :: [Character] -> IO Character
-  , _selectSpace :: [Space] -> IO Space
+makeLenses ''Character
 
-}
 
-makeLenses ''AI
+
 
 sillyAI :: AI
 sillyAI = AI {
-  _selectCharacter = return . head
+  _selectCharacter = return . Just .  head
   , _selectSpace = return . head
 }
 
@@ -44,7 +41,16 @@ data Player = Player {
   , _ai :: AI
 }
 
+data AI = AI {
+  _selectCharacter :: [Player] -> IO (Maybe Player)
+  , _selectSpace :: [Space] -> IO Space
+
+}
+
 makeLenses ''Player
+
+makeLenses ''AI
+
 
 wizard :: AI -> Player
 wizard ai = Player {
