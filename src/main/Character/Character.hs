@@ -21,7 +21,7 @@ data Character = Character {
   , _followers :: [Follower]
   , _alignment :: Alignment
   , _characterType :: CharacterType
-}
+} deriving (Show, Eq)
 
 makeLenses ''Character
 
@@ -40,6 +40,13 @@ data Player = Player {
   , _place :: SpaceType
   , _ai :: AI
 }
+
+instance Show Player where
+  show player = show (_character player) ++ " " ++ show (_place player)
+
+instance Eq Player where
+   (==) player1 player2 = _character player1 == _character player2
+                           && _place player1 == _place player2
 
 data AI = AI {
   _selectCharacter :: [Player] -> IO (Maybe Player)

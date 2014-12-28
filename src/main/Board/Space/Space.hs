@@ -5,6 +5,7 @@ import Board.Adventure.Adventure
 import Board.Follower.Follower
 import Board.Object.Object
 import Data.Map
+import TalismanErrors.TalismanErrors
 import Control.Lens
 import Data.List as List
 
@@ -68,7 +69,7 @@ data Space = Space {
   , _freeObjects :: [Object]
   , _adventures :: [Adventure]
   , _spaceType :: SpaceType
-}
+} deriving (Show, Eq)
 
 
 makeLenses ''Space
@@ -110,14 +111,14 @@ boardLayout = fromList [
 {-Initialize previous with current space as it doesn't matter in the beginning anyway, the filtering
 should just not happen (in this case it will happen but no space can be it's own neigbour so nothing
 will be filtered. It's nasty, it's true. -}
-movementOptions :: Int -> SpaceType -> Either String [SpaceType]
+movementOptions :: Int -> SpaceType -> Either TalismanErrors [SpaceType]
 movementOptions dieRoll curSpace = movementOptionsEither boardLayout dieRoll curSpace curSpace
 
-movementOptionsEither :: BoardLayout -> Int -> SpaceType -> SpaceType -> Either String [SpaceType]
+movementOptionsEither :: BoardLayout -> Int -> SpaceType -> SpaceType -> Either TalismanErrors [SpaceType]
 movementOptionsEither _ 0 previous curSpace = Right [curSpace]
 movementOptionsEither layout x previous curSpace = do
     neighbours <- maybe
-                     (Left $ "Didn't find space " ++ show curSpace ++ " in boardLayout, not so good")
+                     (Left SpaceTypeNotFound)
                      Right $ layout ^. at curSpace
     let neighboursButNoBackTracking = List.filter (/= previous) neighbours
     listOfLists <- traverse (movementOptionsEither layout (x-1) curSpace) neighboursButNoBackTracking
@@ -144,4 +145,8 @@ createStartingSpace spaceType = Space {
   , _adventures = []
   }
 
+lookupSpaces :: [SpaceType] -> Board -> Either TalismanErrors [Space]
+lookupSpaces spaceTypes board = traverse
+  (\spaceType -> maybe (Left SpaceTypeNotFound) Right $ board ^. at spaceType)
+  spaceTypes
 

@@ -10,6 +10,8 @@ import qualified Data.List as List
 import Data.Map
 import Game.GameState
 import Board.Adventure.Adventure
+import Data.Foldable
+import TalismanErrors.TalismanErrors
 
 nextRoll:: (MonadState [DieRoll] m , Monad m) => m DieRoll
 nextRoll = do
@@ -18,24 +20,8 @@ nextRoll = do
     put $ tail rolls
     return nextOne
 
-getOtherPlayersInSamePosition :: (MonadIO m, MonadState GameState m) =>
-  Player -> EitherT String m [Player]
-getOtherPlayersInSamePosition player = do
-  players <- gets ( ^. players)
-  let allPlayers = snd . unzip . toList $ players
-      selectedPlayerPlace = player ^. place
-      selectedPlayerType = player ^. character . characterType
-  right $ List.filter (\p ->
-    p ^. place == selectedPlayerPlace
-      && p ^. character . characterType /= selectedPlayerType) allPlayers
-
-lookupSpaces :: [SpaceType] -> Board -> Either String [Space]
-lookupSpaces spaceTypes board = traverse
-  (\spaceType -> maybe (Left "spaceType not found") Right $ board ^. at spaceType)
-  spaceTypes
-
 movePhase :: (MonadState GameState m, MonadIO m) =>
-  ReifiedLens' Players Player -> EitherT String m ()
+  ReifiedLens' Players Player -> EitherT TalismanErrors m ()
 movePhase playerLens  = do
    currentPlayers <- gets (^. players)
    let currentPlace = currentPlayers ^.  runLens playerLens . place
@@ -86,34 +72,32 @@ fight attackerLens defenderLens = do
     GT -> loseFight defenderLens
 
 fightPhase :: (MonadIO m, MonadState GameState m) =>
-  Player -> [Player] -> EitherT String m ()
+  Player -> [Player] -> EitherT TalismanErrors m ()
 fightPhase player others = do
   maybeFight <- liftIO $ (player ^. ai . selectCharacter) others
 --   maybe do this with a traverse in the future, but okay for now
   maybe (return ()) undefined maybeFight
 
 determineNumberOfCardsToDraw :: (MonadState GameState m, MonadIO m) =>
-  ReifiedLens' Players Player -> EitherT String m Int
+  ReifiedLens' Players Player -> EitherT TalismanErrors m Int
 determineNumberOfCardsToDraw playerLens = do
   players <- gets (^. players)
   let currentSpaceLens  = players ^. runLens playerLens . place
   board <- gets (^.  board)
-  currentSpace <- hoistEither $ maybe (Left "not found") Right $  board ^. at currentSpaceLens
+  currentSpace <- hoistEither $ maybe (Left SpaceTypeNotFound) Right $  board ^. at currentSpaceLens
   let maxCards = cardsToDraw currentSpace
   let currentCards =  length $ currentSpace ^. adventures
   case maxCards `compare` currentCards of
     GT -> return $ maxCards - currentCards
---     TODO, how does fall through work again?
-    LT -> return 0
-    EQ -> return 0
+    _ -> return 0
 
 alterMaybeSpace :: (MonadState GameState m) => (Space -> Space) ->
-  Maybe Space -> EitherT String m (Maybe Space)
+  Maybe Space -> EitherT TalismanErrors m (Maybe Space)
 alterMaybeSpace alterSpace maybeSpace =
-  hoistEither $ maybe (Left "Space not found") (Right .Just . alterSpace) maybeSpace
+  hoistEither $ maybe (Left SpaceTypeNotFound) (Right .Just . alterSpace) maybeSpace
 
 addAdventures :: (MonadState GameState m) => ReifiedLens' Board (Maybe Space)
-  -> [Adventure] -> EitherT String m ()
+  -> [Adventure] -> EitherT TalismanErrors m ()
 addAdventures  spaceLens newAdventures = do
   currentBoard <- gets ( ^. board)
   newBoard <-  traverseOf (runLens spaceLens)
@@ -121,7 +105,7 @@ addAdventures  spaceLens newAdventures = do
   modify (\gameState -> board .~ newBoard $ gameState )
 
 
-drawCards :: (MonadState GameState m, MonadIO m) => ReifiedLens' Players Player -> EitherT String m ()
+drawCards :: (MonadState GameState m, MonadIO m) => ReifiedLens' Players Player -> EitherT TalismanErrors m ()
 drawCards playerLens = do
   numberOfCardsToDraw <- determineNumberOfCardsToDraw  playerLens
   currentPlayers <- gets (^. players)
@@ -131,11 +115,13 @@ drawCards playerLens = do
   addAdventures (Lens $ at $ currentPlayers ^. runLens playerLens . place ) drawnCards
 
 playRound :: (MonadState GameState m, MonadIO m) => ReifiedLens' Players Player
- -> EitherT String m ()
+ -> EitherT TalismanErrors m ()
 playRound playerLens = do
   movePhase playerLens
   players <- gets (^. players)
   let player = players ^.  runLens playerLens
-  otherPlayersOnSameSpace <- getOtherPlayersInSamePosition player
+--   otherPlayersOnSameSpace <- getOtherPlayersInSamePosition player
+-- TODO
+  otherPlayersOnSameSpace <- getOtherPlayersInSamePosition undefined
   fightPhase player otherPlayersOnSameSpace
   drawCards playerLens

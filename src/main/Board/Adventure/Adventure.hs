@@ -1,3 +1,3 @@
 module Board.Adventure.Adventure where
 
-data Adventure = Adventure
+data Adventure = Adventure deriving (Show, Eq)

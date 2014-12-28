@@ -35,6 +35,8 @@ library
     , Board.Space.Space
     , Character.Character
     , DungeonMaster.DungeonMaster
+    , Game.GameState
+    , TalismanErrors.TalismanErrors
   other-modules:
   build-depends:       base >=4.6
                        , lens
@@ -58,7 +60,11 @@ test-suite unit-tests
                        tasty-smallcheck,
                        tasty-ant-xml,
                        tasty-hspec,
-                       talisman-redux
+                       talisman-redux,
+                       containers,
+                       lens,
+                       either,
+                       mtl
                        
   ghc-options:         -threaded
 
