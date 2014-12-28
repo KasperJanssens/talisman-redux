@@ -69,8 +69,6 @@ playRound playerLens = do
   movePhase playerLens
   players <- gets (^. players)
   player <- maybe (left PlayerNotFound) right $ players ^.  runLens playerLens
---   otherPlayersOnSameSpace <- getOtherPlayersInSamePosition player
--- TODO, fill out player. Also, maybe need to standardize on passing player and space lenses around
-  otherPlayersOnSameSpace <- getOtherPlayersInSamePosition undefined
+  otherPlayersOnSameSpace <- getOtherPlayersInSamePosition playerLens
   fightPhase player otherPlayersOnSameSpace
   drawCards playerLens
