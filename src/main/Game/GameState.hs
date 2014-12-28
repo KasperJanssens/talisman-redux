@@ -43,3 +43,8 @@ getOtherPlayersInSamePosition playerLens = do
                                     _  -> [p]
                             _ -> []
                           ) currentPlayers
+
+alterMaybePlayer :: (MonadState GameState m) => (Player -> Player) ->
+  Maybe Player -> EitherT TalismanErrors m (Maybe Player)
+alterMaybePlayer alterPlayer maybePlayer =
+  hoistEither $ maybe (Left PlayerNotFound) (Right . Just . alterPlayer) maybePlayer

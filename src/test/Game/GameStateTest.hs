@@ -28,5 +28,5 @@ spec = describe "getOtherPlayersInSamePosition" $
             let eitherResult = evalState
                                   (runEitherT $
                                     getOtherPlayersInSamePosition wizardLens) gameState
-            either expectationFailure
+            either (expectationFailure . show)
               (`shouldMatchList` [currentOgreChieftain] ) eitherResult

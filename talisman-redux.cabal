@@ -35,6 +35,8 @@ library
     , Board.Space.Space
     , Character.Character
     , DungeonMaster.DungeonMaster
+    , DungeonMaster.Movement
+    , DungeonMaster.Fight
     , Game.GameState
     , TalismanErrors.TalismanErrors
   other-modules:
