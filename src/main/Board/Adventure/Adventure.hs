@@ -1,3 +1,6 @@
 module Board.Adventure.Adventure where
 
-data Adventure = Adventure deriving (Show, Eq)
+data Adversary = Monster Int | Spirit Int deriving (Show, Eq)
+
+data Adventure = Combat Adversary deriving (Show, Eq)
+

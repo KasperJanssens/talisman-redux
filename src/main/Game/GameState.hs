@@ -48,3 +48,17 @@ alterMaybePlayer :: (MonadState GameState m) => (Player -> Player) ->
   Maybe Player -> EitherT TalismanErrors m (Maybe Player)
 alterMaybePlayer alterPlayer maybePlayer =
   hoistEither $ maybe (Left PlayerNotFound) (Right . Just . alterPlayer) maybePlayer
+
+findPlayer :: (MonadState GameState m ) => ReifiedLens' Players (Maybe Player)
+  -> EitherT TalismanErrors m Player
+findPlayer playerLens = do
+  currentPlayers <- gets (^. players)
+  hoistEither $ maybe (Left PlayerNotFound) Right $ currentPlayers ^. runLens playerLens
+
+updatePlayer :: (MonadState GameState m) => Player -> EitherT TalismanErrors m ()
+updatePlayer playerToUpdate = do
+  currentPlayers <- gets ( ^. players)
+  newPlayers <- traverseOf (at $ playerToUpdate ^. character . characterType)
+    (alterMaybePlayer (const playerToUpdate)) currentPlayers
+  modify (\gameState -> gameState & players .~ newPlayers )
+

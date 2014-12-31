@@ -20,18 +20,18 @@ data Character = Character {
   , _objects :: [Object]
   , _followers :: [Follower]
   , _alignment :: Alignment
+  , _strengthTrophies :: [Int]
+  , _craftTrophies :: [Int]
   , _characterType :: CharacterType
 } deriving (Show, Eq)
 
 makeLenses ''Character
 
-
-
-
 sillyAI :: AI
 sillyAI = AI {
   _selectCharacter = return . Just .  head
   , _selectSpace = return . head
+  , _selectAttackType = return $ Lens strength
 }
 
 {- Maybe place has to move to Character??-}
@@ -51,6 +51,7 @@ instance Eq Player where
 data AI = AI {
   _selectCharacter :: [Player] -> IO (Maybe Player)
   , _selectSpace :: [Space] -> IO Space
+  , _selectAttackType :: IO (ReifiedLens' Character Int)
 
 }
 
@@ -70,6 +71,8 @@ wizard ai = Player {
     _objects=[],
     _followers=[],
     _alignment=Evil,
+    _strengthTrophies = [],
+    _craftTrophies = [],
     _characterType = Wizard
     }
   , _place = GraveyardSpace
@@ -87,6 +90,8 @@ ogreChieftain ai = Player {
     _objects=[],
     _followers=[],
     _alignment=Neutral,
+    _strengthTrophies = [],
+    _craftTrophies = [],
     _characterType = OgreChieftain
     }
   , _place=CragsSpace
@@ -104,10 +109,19 @@ thief ai = Player {
     _objects=[],
     _followers=[],
     _alignment=Neutral,
+    _strengthTrophies = [],
+    _craftTrophies = [],
     _characterType = Thief
     }
   , _place= CitySpace
   , _ai = ai
 }
 
+class DetermineAttackType a where
+  determineAttackType :: a -> IO (ReifiedLens' Character Int)
 
+instance DetermineAttackType Player where
+  determineAttackType p =
+    case p ^. character . characterType of
+      Wizard -> p ^. ai . selectAttackType
+      _ -> return $ Lens strength
